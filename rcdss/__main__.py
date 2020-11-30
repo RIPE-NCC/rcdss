@@ -15,19 +15,20 @@ from . import __version__
 @click.option(
     "--shelf", "-s",
     type=click.Path(file_okay=True, readable=True),
-    help="Shelve file to read, have precedence over -i",
+    help="Shelf file to read, have precedence over -i",
 )
 @click.option(
-    "--infile", "-i", type=click.File("r"),
+    "--input", "-i", "input_", type=click.File("r"),
     default=sys.stdin, help="Input RPSL file if no shelf "
-    "file is provided",
+    "file is provided [default: stdin]",
 )
 @click.option(
-    "--outfile", "-o", type=click.File("w"),
-    default=sys.stdout, help="Path of the output file",
+    "--output", "-o", type=click.File("w"),
+    default=sys.stdout, help="Output RPSL-like file "
+    "[default: stdout]",
 )
 @click.version_option(__version__)
-def main(shelf, infile, outfile):
+def main(shelf, input_, output):
     """
     Scan for CDS record for given DOMAIN objects.
     """
@@ -37,11 +38,11 @@ def main(shelf, infile, outfile):
     logger.addHandler(handler)
     if shelf is not None:
         s = shelve.open(shelf)
-        infile = (line for obj in s.values() for line in (obj + ["\n"]))
-    for obj in rpsl.parse_rpsl_objects(infile):
+        input_ = (line for obj in s.values() for line in (obj + ["\n"]))
+    for obj in rpsl.parse_rpsl_objects(input_):
         o = do_cds_scan(obj)
         if o is not None:
-            print(rpsl.write_rpsl_object(o), file=outfile)
+            print(rpsl.write_rpsl_object(o), file=output)
 
 
 if __name__ == "__main__":
