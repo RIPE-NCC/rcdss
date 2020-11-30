@@ -1,4 +1,5 @@
 import datetime
+from collections import defaultdict
 
 import dns
 import dns.resolver
@@ -168,21 +169,29 @@ def check_CDS_continuity(cds, dnskeyset):
     as per RFC 7344 section 4.1
 
     In a nutshell this means that at least one of the CDS rdata must be
-    used to sign zone's DNSKEY record.
+    used to sign zone's DNSKEY record for each signature algorithm present.
     """
-    cdsset = {
+    dssets = defaultdict(set)
+    for ds in (
         dns.rdata.from_text(
-            dns.rdataclass.IN, dns.rdatatype.DS,
+            dns.rdataclass.IN,
+            dns.rdatatype.DS,
             rdata.to_text(),
         ) for rdata in cds.rrset
-    }
-    keyset = filter_dnskey_set(dnskeyset, cdsset)
+    ):
+        dssets[ds.algorithm].add(ds)
     try:
-        dns.dnssec.validate(
-            dnskeyset.rrset,
-            get_rrsigset(dnskeyset.response),
-            {cds.name: keyset},
-        )
+        for alg, dsset in dssets.items():
+            logger.debug(
+                "Validating CDS continuity for algorithm %s.",
+                dns.dnssec.algorithm_to_text(alg),
+            )
+            keyset = filter_dnskey_set(dnskeyset, dsset)
+            dns.dnssec.validate(
+                dnskeyset.rrset,
+                get_rrsigset(dnskeyset.response),
+                {cds.name: keyset},
+            )
         return True
     except dns.dnssec.ValidationFailure:
         return False
