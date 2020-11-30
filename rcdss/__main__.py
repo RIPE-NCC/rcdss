@@ -1,12 +1,11 @@
 
 import sys
-import logging
 import shelve
 
 import click
 
 from .dsscanner import do_cds_scan
-from .log import logger, log_format
+from .log import setup_logger
 from . import rpsl
 from . import __version__
 
@@ -27,15 +26,20 @@ from . import __version__
     default=sys.stdout, help="Output RPSL-like file "
     "[default: stdout]",
 )
+@click.option(
+    "--logfile", "-l", type=click.Path(dir_okay=False, writable=True,),
+    help="Log file, automatically rotated",
+)
+@click.option(
+    "--verbose", "-v", count=True,
+    help="Increase verbosity",
+)
 @click.version_option(__version__)
-def main(shelf, input_, output):
+def main(shelf, input_, output, logfile, verbose):
     """
     Scan for CDS record for given DOMAIN objects.
     """
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setFormatter(log_format)
-    logger.addHandler(handler)
+    setup_logger(logfile, verbose)
     if shelf is not None:
         s = shelve.open(shelf)
         input_ = (line for obj in s.values() for line in (obj + ["\n"]))
