@@ -29,14 +29,17 @@ def do_cds_scan(obj):
     if not check_inception_date(obj, cds):
         logger.info("CDS signature inception too old")
         return None
-    if not check_signed_by_KSK(cds, ripe_ds_rdataset):
+    dnskeyset = query_dns(domain, "DNSKEY")
+    if dnskeyset is None:
+        return None
+    if not check_signed_by_KSK(cds, ripe_ds_rdataset, dnskeyset):
         logger.info("CDS not properly signed by current KSK")
         return None
     if cds_rdataset != ripe_ds_rdataset:
         obj["old-ds-rdata"] = obj.pop("ds-rdata")
         if is_delete_cds(cds):
             obj["reason"] = "DNSSEC delegation deleted by CDS record"
-        elif not check_CDS_continuity(cds):
+        elif not check_CDS_continuity(cds, dnskeyset):
             logger.info("DNSKEY not properly signed by CDS records")
             return None
         else:
@@ -136,7 +139,7 @@ def filter_dnskey_set(dnskeyset, dsset):
     return s
 
 
-def check_signed_by_KSK(cds, ripe_ds_rdataset):
+def check_signed_by_KSK(cds, ripe_ds_rdataset, dnskeyset):
     """
     Check if the CDS is actually signed by a key contained in the
     current DS RRSET as per RFC 7344 section 4.1
@@ -147,9 +150,6 @@ def check_signed_by_KSK(cds, ripe_ds_rdataset):
             rdata,
         ) for rdata in ripe_ds_rdataset
     }
-    dnskeyset = query_dns(cds.name, "DNSKEY")
-    if dnskeyset is None:
-        return False
     keyset = filter_dnskey_set(dnskeyset, dsset)
     try:
         dns.dnssec.validate(
@@ -162,7 +162,7 @@ def check_signed_by_KSK(cds, ripe_ds_rdataset):
         return False
 
 
-def check_CDS_continuity(cds):
+def check_CDS_continuity(cds, dnskeyset):
     """
     Check if the CDS, when applied, will not break the current delegation
     as per RFC 7344 section 4.1
@@ -176,9 +176,6 @@ def check_CDS_continuity(cds):
             rdata.to_text(),
         ) for rdata in cds.rrset
     }
-    dnskeyset = query_dns(cds.name, "DNSKEY")
-    if dnskeyset is None:
-        return False
     keyset = filter_dnskey_set(dnskeyset, cdsset)
     try:
         dns.dnssec.validate(
