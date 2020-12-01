@@ -28,22 +28,27 @@ def do_cds_scan(obj):
     cds_rdataset = {rd.to_text().lower() for rd in cds}
     logger.debug(f"CDS  rdataset: {cds_rdataset}")
     if not check_inception_date(obj, cds):
-        logger.info("CDS signature inception too old")
+        logger.warning(f"CDS signature inception too old for {domain}")
         return None
     dnskeyset = query_dns(domain, "DNSKEY")
     if dnskeyset is None:
         return None
     if not check_signed_by_KSK(cds, ripe_ds_rdataset, dnskeyset):
-        logger.info("CDS not properly signed by current KSK")
+        logger.warning(f"CDS of {domain} not properly signed by current KSK")
         return None
     if cds_rdataset != ripe_ds_rdataset:
         obj["old-ds-rdata"] = obj.pop("ds-rdata")
         if is_delete_cds(cds):
             obj["reason"] = "DNSSEC delegation deleted by CDS record"
+            logger.info(f"DS deletion requested for {domain}")
         elif not check_CDS_continuity(cds, dnskeyset):
-            logger.info("DNSKEY not properly signed by CDS records")
+            logger.warning(
+                f"DNSKEY of {domain} not properly "
+                f"signed by CDS records",
+            )
             return None
         else:
+            logger.info(f"DS should be updated for {domain}")
             obj["ds-rdata"] = list(cds_rdataset)
             obj["reason"] = "Updated by CDS record"
         return obj
@@ -57,14 +62,14 @@ def query_dns(domain, rdtype="CDS"):
     try:
         a = resolver.resolve(domain, rdtype)
         if a.response.rcode() != 0:
-            logger.info("DNS RCODE:", dns.rcode.to_text(a.response.rcode()))
+            logger.error("DNS RCODE:", dns.rcode.to_text(a.response.rcode()))
             return None
         if (a.response.flags & dns.flags.AD) is False:
-            logger.info("Unauthenticated response")
+            logger.warning(f"Unauthenticated response for {domain}")
             return None
         return a
     except dns.exception.DNSException as e:
-        logger.info(f"DNS exception: {e}")
+        logger.warning(f"DNS exception: {e}")
 
 
 def get_rrsigset(response):

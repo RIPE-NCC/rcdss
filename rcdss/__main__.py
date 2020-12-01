@@ -32,7 +32,7 @@ from . import __version__
 )
 @click.option(
     "--verbose", "-v", count=True,
-    help="Increase verbosity",
+    help="Increase verbosity (use twice for debug info)",
 )
 @click.version_option(__version__)
 def main(shelf, input_, output, logfile, verbose):
