@@ -52,6 +52,8 @@ def do_cds_scan(obj):
             obj["ds-rdata"] = list(cds_rdataset)
             obj["reason"] = "Updated by CDS record"
         return obj
+    else:
+        logger.info(f"No change requested for {domain}")
 
 
 def query_dns(domain, rdtype="CDS"):
