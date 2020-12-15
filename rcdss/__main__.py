@@ -5,7 +5,8 @@ import shelve
 import click
 
 from .dsscanner import do_cds_scan
-from .log import setup_logger
+from .log import setup_logger, logger
+from .stats import report_counts
 from . import rpsl
 from . import __version__
 
@@ -47,6 +48,7 @@ def main(shelf, input_, output, logfile, verbose):
         o = do_cds_scan(obj)
         if o is not None:
             print(rpsl.write_rpsl_object(o), file=output)
+    logger.info("Finished. Here are some stats:\n%s", report_counts())
 
 
 if __name__ == "__main__":

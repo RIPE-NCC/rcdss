@@ -6,6 +6,7 @@ import dns.resolver
 import dns.dnssec
 
 from .log import logger
+from .stats import record, Event
 
 
 def do_cds_scan(obj):
@@ -24,35 +25,43 @@ def do_cds_scan(obj):
 
     cds = query_dns(domain)
     if cds is None:
+        record(domain, Event.NO_CDS)
         return None
     cds_rdataset = {rd.to_text().lower() for rd in cds}
+    record(domain, Event.HAVE_CDS)
     logger.debug(f"CDS  rdataset: {cds_rdataset}")
     if not check_inception_date(obj, cds):
+        record(domain, Event.OLD_SIG)
         logger.warning(f"CDS signature inception too old for {domain}")
         return None
     dnskeyset = query_dns(domain, "DNSKEY")
     if dnskeyset is None:
         return None
     if not check_signed_by_KSK(cds, ripe_ds_rdataset, dnskeyset):
+        record(domain, Event.NOT_SIGNED_BY_KSK)
         logger.warning(f"CDS of {domain} not properly signed by current KSK")
         return None
     if cds_rdataset != ripe_ds_rdataset:
         obj["old-ds-rdata"] = obj.pop("ds-rdata")
         if is_delete_cds(cds):
+            record(domain, Event.CDS_DELETE)
             obj["reason"] = "DNSSEC delegation deleted by CDS record"
             logger.info(f"DS deletion requested for {domain}")
         elif not check_CDS_continuity(cds, dnskeyset):
+            record(domain, Event.CDS_CONTINUITY_ERR)
             logger.warning(
                 f"DNSKEY of {domain} not properly "
                 f"signed by CDS records",
             )
             return None
         else:
+            record(domain, Event.CDS_UPDATE_PENDING)
             logger.info(f"DS should be updated for {domain}")
             obj["ds-rdata"] = list(cds_rdataset)
             obj["reason"] = "Updated by CDS record"
         return obj
     else:
+        record(domain, Event.CDS_NOOP)
         logger.info(f"No change requested for {domain}")
 
 
