@@ -65,11 +65,7 @@ def parse_rpsl_object(buffer):
 
 def write_rpsl_object(obj):
     buf = []
-    fmt = "{:15} {}"
-    keys = []
-    for k in KEY_ORDER:
-        if k in obj:
-            keys.append(k)
+    keys = [k for k in KEY_ORDER if k in obj]
     keys.extend(set(obj) - set(keys))
     for k in keys:
         if isinstance(obj[k], list):
@@ -77,6 +73,6 @@ def write_rpsl_object(obj):
         else:
             values = [obj[k], ]
         for v in values:
-            buf.append(fmt.format(k + ":", v))
+            buf.append("{:15} {}".format(k + ":", v))
     buf.append("")
     return "\n".join(buf)
