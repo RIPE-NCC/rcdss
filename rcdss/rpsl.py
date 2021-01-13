@@ -3,7 +3,7 @@ from .log import logger
 
 # Keys that should NOT be parsed into lists
 SINGLE_VALUE_KEYS = {
-    "domain", "created", "last-modified",
+    "domain", "created", "last-modified", "reason",
 }
 
 IGNORED_KEYS = {
