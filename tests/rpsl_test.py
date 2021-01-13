@@ -53,10 +53,12 @@ def test_write_rpsl_object():
     assert r == (
         """\
 domain:         83.204.91.in-addr.arpa
+descr:          CDS test
 nserver:        flexi.oskarcz.net
 nserver:        auron.oskarcz.eu
 ds-rdata:       39498 13 2 9FA8FB7A9D59BEE035502284202A5""" +
         """44D8A6590180ACD68490190121AB6EE3F0C
+created:        2020-11-10T19:57:33Z
 last-modified:  2020-11-10T21:03:20Z
 """
     )
