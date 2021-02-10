@@ -20,7 +20,7 @@ def do_cds_scan(obj):
     if not domain.endswith("."):
         domain += "."
     logger.info(f"Processing domain: {domain}")
-    ripe_ds_rdataset = {s.lower() for s in obj.get("ds-rdata")}
+    ripe_ds_rdataset = {s.lower() for s in obj.get("ds-rdata", [])}
     logger.debug(f"RIPE rdataset: {ripe_ds_rdataset}")
 
     cds = query_dns(domain)
