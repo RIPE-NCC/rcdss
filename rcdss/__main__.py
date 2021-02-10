@@ -45,6 +45,8 @@ def main(shelf, input_, output, logfile, verbose):
         s = shelve.open(shelf)
         input_ = (line for obj in s.values() for line in (obj + ["\n"]))
     for obj in rpsl.parse_rpsl_objects(input_):
+        if "ds-rdata" not in obj:
+            continue
         o = do_cds_scan(obj)
         if o is not None:
             print(rpsl.write_rpsl_object(o), file=output)
