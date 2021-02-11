@@ -7,7 +7,7 @@ setup(
     description=rcdss.__doc__,
     author="Ondřej Caletka",
     author_email="ondrej.caletka@ripe.net",
-    py_packages=["rcdss"],
+    packages=["rcdss"],
     setup_requires=["pytest-runner"],
     python_requires=">=3.6",
     install_requires=["dnspython", "cryptography", "click"],
