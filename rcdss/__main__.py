@@ -1,6 +1,6 @@
 
 import sys
-import shelve
+import gzip
 
 import click
 
@@ -13,14 +13,9 @@ from . import __version__
 
 @click.command()
 @click.option(
-    "--shelf", "-s",
-    type=click.Path(file_okay=True, readable=True),
-    help="Shelf file to read, have precedence over -i",
-)
-@click.option(
-    "--input", "-i", "input_", type=click.File("r"),
-    default=sys.stdin, help="Input RPSL file if no shelf "
-    "file is provided [default: stdin]",
+    "--input", "-i", "input_", type=click.Path(exists=True, dir_okay=False, ),
+    help="Read latin1 encoded file containing domain objects, "
+         "optionally compressed with Gzip, instead of standard input",
 )
 @click.option(
     "--output", "-o", type=click.File("w"),
@@ -36,15 +31,20 @@ from . import __version__
     help="Increase verbosity (use twice for debug info)",
 )
 @click.version_option(__version__)
-def main(shelf, input_, output, logfile, verbose):
+def main(input_, output, logfile, verbose):
     """
     Scan for CDS record for given DOMAIN objects.
     """
     setup_logger(logfile, verbose)
-    if shelf is not None:
-        s = shelve.open(shelf)
-        input_ = (line for obj in s.values() for line in (obj + ["\n"]))
-    for obj in rpsl.parse_rpsl_objects(input_):
+
+    if input_ is None:
+        inf = sys.stdin
+    elif input_.lower().endswith(".gz"):
+        inf = gzip.open(input_, "rt", encoding="latin1")
+    else:
+        inf = open(input_, "rt", encoding="latin1")
+
+    for obj in rpsl.parse_rpsl_objects(inf):
         if "ds-rdata" not in obj:
             continue
         o = do_cds_scan(obj)
