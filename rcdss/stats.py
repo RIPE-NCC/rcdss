@@ -32,3 +32,8 @@ def report_counts():
         count = len(_RECORDS[event])
         output.append(f"{name:<20} {count}")
     return "\n".join(output)
+
+
+def report_domains():
+    """Return dictionary with all recorded events."""
+    return dict(_RECORDS)
