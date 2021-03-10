@@ -20,8 +20,6 @@ def do_cds_scan(obj):
     if not domain.endswith("."):
         domain += "."
     logger.info(f"Processing domain: {domain}")
-    ripe_ds_rdataset = {s.lower() for s in obj.get("ds-rdata", [])}
-    logger.debug(f"RIPE rdataset: {ripe_ds_rdataset}")
 
     cds = query_dns(domain)
     if cds is None:
@@ -30,21 +28,24 @@ def do_cds_scan(obj):
     if cds.rrset is None:
         record(domain, Event.NO_CDS)
         return None
-    cds_rdataset = {rd.to_text().lower() for rd in cds}
+    dnskeyset = query_dns(domain, "DNSKEY")
+    if dnskeyset is None or dnskeyset.rrset is None:
+        record(domain, Event.DNS_FAILURE)
+        return None
     record(domain, Event.HAVE_CDS)
-    logger.debug(f"CDS  rdataset: {cds_rdataset}")
+    ds_rdataset = {s.lower() for s in obj.get("ds-rdata", [])}
+    logger.debug(f" DS rdataset: {ds_rdataset}")
+    cds_rdataset = {rd.to_text().lower() for rd in cds}
+    logger.debug(f"CDS rdataset: {cds_rdataset}")
     if not check_inception_date(obj, cds):
         record(domain, Event.OLD_SIG)
         logger.warning(f"CDS signature inception too old for {domain}")
         return None
-    dnskeyset = query_dns(domain, "DNSKEY")
-    if dnskeyset is None:
-        return None
-    if not check_signed_by_KSK(cds, ripe_ds_rdataset, dnskeyset):
+    if not check_signed_by_KSK(cds, ds_rdataset, dnskeyset):
         record(domain, Event.NOT_SIGNED_BY_KSK)
         logger.warning(f"CDS of {domain} not properly signed by current KSK")
         return None
-    if cds_rdataset != ripe_ds_rdataset:
+    if cds_rdataset != ds_rdataset:
         obj["old-ds-rdata"] = obj.pop("ds-rdata")
         if is_delete_cds(cds):
             record(domain, Event.CDS_DELETE)
@@ -169,7 +170,7 @@ def filter_dnskey_set(dnskeyset, dsset):
     return s
 
 
-def check_signed_by_KSK(cds, ripe_ds_rdataset, dnskeyset):
+def check_signed_by_KSK(cds, ds_rdataset, dnskeyset):
     """
     Check if the CDS is actually signed by a key contained in the
     current DS RRSET as per RFC 7344 section 4.1
@@ -178,7 +179,7 @@ def check_signed_by_KSK(cds, ripe_ds_rdataset, dnskeyset):
         dns.rdata.from_text(
             dns.rdataclass.IN, dns.rdatatype.DS,
             rdata,
-        ) for rdata in ripe_ds_rdataset
+        ) for rdata in ds_rdataset
     }
     keyset = filter_dnskey_set(dnskeyset, dsset)
     try:
