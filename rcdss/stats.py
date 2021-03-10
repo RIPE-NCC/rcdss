@@ -6,6 +6,10 @@ _RECORDS = defaultdict(list)
 
 
 class Event(Enum):
+    DNS_FAILURE = auto()
+    DNS_BOGUS = auto()
+    DNS_LAME = auto()
+    DNS_TIMEOUT = auto()
     HAVE_CDS = auto()
     NO_CDS = auto()
     OLD_SIG = auto()

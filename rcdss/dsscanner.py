@@ -25,6 +25,9 @@ def do_cds_scan(obj):
 
     cds = query_dns(domain)
     if cds is None:
+        record(domain, Event.DNS_FAILURE)
+        return None
+    if cds.rrset is None:
         record(domain, Event.NO_CDS)
         return None
     cds_rdataset = {rd.to_text().lower() for rd in cds}
@@ -71,14 +74,24 @@ def query_dns(domain, rdtype="CDS"):
     resolver.set_flags(dns.flags.RD | dns.flags.AD)
     resolver.use_edns(0, dns.flags.DO, 1200)
     try:
-        a = resolver.resolve(domain, rdtype)
-        if a.response.rcode() != 0:
-            logger.error("DNS RCODE:", dns.rcode.to_text(a.response.rcode()))
-            return None
+        a = resolver.resolve(domain, rdtype, raise_on_no_answer=False)
         if (a.response.flags & dns.flags.AD) is False:
             logger.warning(f"Unauthenticated response for {domain}")
             return None
         return a
+    except dns.resolver.NoNameservers:
+        # Is this a DNSSEC failure?
+        try:
+            resolver.flags |= dns.flags.CD
+            resolver.resolve(domain, rdtype, raise_on_no_answer=False)
+            logger.warning(f"Bogus DNSSEC for domain: {domain}")
+            record(domain, Event.DNS_BOGUS)
+        except dns.exception.DNSException as e:
+            logger.warning(f"Non-DNSSEC related exception: {e}")
+            record(domain, Event.DNS_LAME)
+    except dns.resolver.Timeout:
+        logger.warning(f"DNS timeout for domain: {domain}")
+        record(domain, Event.DNS_TIMEOUT)
     except dns.exception.DNSException as e:
         logger.warning(f"DNS exception: {e}")
 
