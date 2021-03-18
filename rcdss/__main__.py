@@ -19,7 +19,7 @@ from . import __version__
          "optionally compressed with Gzip, instead of standard input",
 )
 @click.option(
-    "--output", "-o", type=click.File("w"),
+    "--output", "-o", type=click.File("w", atomic=True,),
     default=sys.stdout, help="Output RPSL-like file "
     "[default: stdout]",
 )
@@ -32,7 +32,7 @@ from . import __version__
     help="Increase verbosity (use twice for debug info)",
 )
 @click.option(
-    "--dump-stats", type=click.File("w"),
+    "--dump-stats", type=click.File("w", atomic=True,),
     help="Dump domain stats to a JSON file",
 )
 @click.version_option(__version__)
