@@ -19,7 +19,7 @@ from . import __version__
          "optionally compressed with Gzip, instead of standard input",
 )
 @click.option(
-    "--output", "-o", type=click.File("w", atomic=True,),
+    "--output", "-o", type=click.File("w", atomic=True, lazy=False),
     default=sys.stdout, help="Output RPSL-like file "
     "[default: stdout]",
 )
