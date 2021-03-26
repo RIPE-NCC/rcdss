@@ -37,15 +37,21 @@ def do_cds_scan(obj):
     logger.debug(f" DS rdataset: {ds_rdataset}")
     cds_rdataset = {rd.to_text().lower() for rd in cds}
     logger.debug(f"CDS rdataset: {cds_rdataset}")
-    if not check_inception_date(obj, cds):
-        record(domain, Event.OLD_SIG)
-        logger.warning(f"CDS signature inception too old for {domain}")
-        return None
-    if not check_signed_by_KSK(cds, ds_rdataset, dnskeyset):
-        record(domain, Event.NOT_SIGNED_BY_KSK)
-        logger.warning(f"CDS of {domain} not properly signed by current KSK")
-        return None
-    if cds_rdataset != ds_rdataset:
+    if cds_rdataset == ds_rdataset:
+        record(domain, Event.CDS_NOOP)
+        logger.info(f"No change requested for {domain}")
+    else:
+        if not check_inception_date(obj, cds):
+            record(domain, Event.OLD_SIG)
+            logger.warning(f"CDS signature inception too old for {domain}")
+            return None
+        if not check_signed_by_KSK(cds, ds_rdataset, dnskeyset):
+            record(domain, Event.NOT_SIGNED_BY_KSK)
+            logger.warning(
+                f"CDS of {domain} not properly"
+                f"signed by current KSK",
+            )
+            return None
         obj["old-ds-rdata"] = obj.pop("ds-rdata")
         if is_delete_cds(cds):
             record(domain, Event.CDS_DELETE)
@@ -64,9 +70,6 @@ def do_cds_scan(obj):
             obj["ds-rdata"] = list(cds_rdataset)
             obj["reason"] = "Updated by CDS record"
         return obj
-    else:
-        record(domain, Event.CDS_NOOP)
-        logger.info(f"No change requested for {domain}")
 
 
 def query_dns(domain, rdtype="CDS"):
