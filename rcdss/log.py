@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 def setup_logger(logfile, verbose):
     if verbose > 1:
         logger.setLevel(logging.DEBUG)
-    elif verbose == 1 or logfile is not None:
+    elif verbose == 1:
         logger.setLevel(logging.INFO)
     if logfile is not None:
         handler = logging.handlers.TimedRotatingFileHandler(
