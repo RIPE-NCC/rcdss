@@ -1,8 +1,10 @@
 
 from enum import Enum, auto
 from collections import defaultdict
+from queue import SimpleQueue
 
 _RECORDS = defaultdict(list)
+_rq = SimpleQueue()
 
 
 class Event(Enum):
@@ -22,11 +24,18 @@ class Event(Enum):
 
 def record(domain: str, event: Event):
     """Record an event during processing a domain name"""
-    _RECORDS[event].append(domain)
+    _rq.put((domain, event, ))
+
+
+def _process_queue():
+    while not _rq.empty():
+        domain, event = _rq.get_nowait()
+        _RECORDS[event].append(domain)
 
 
 def report_counts():
     """Return simple report of recorded events"""
+    _process_queue()
     output = []
     for name, event in Event.__members__.items():
         count = len(_RECORDS[event])
@@ -36,4 +45,5 @@ def report_counts():
 
 def report_domains():
     """Return dictionary with all recorded events."""
+    _process_queue()
     return dict(_RECORDS)

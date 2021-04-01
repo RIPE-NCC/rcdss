@@ -2,6 +2,8 @@
 import sys
 import gzip
 import json
+import threading
+import queue
 
 import click
 
@@ -10,6 +12,15 @@ from .log import setup_logger, logger
 from .stats import report_counts, report_domains
 from . import rpsl
 from . import __version__
+
+
+def scanThread(inq, outq):
+    while True:
+        obj = inq.get()
+        o = do_cds_scan(obj)
+        if o:
+            outq.put(o)
+        inq.task_done()
 
 
 @click.command()
@@ -32,11 +43,15 @@ from . import __version__
     help="Increase verbosity (use twice for debug info)",
 )
 @click.option(
+    "--threads", "-t", default=15, type=click.IntRange(1), show_default=True,
+    help="Number of scanning threads", metavar="INT",
+)
+@click.option(
     "--dump-stats", type=click.File("w", atomic=True,),
     help="Dump domain stats to a JSON file",
 )
 @click.version_option(__version__)
-def main(input_, output, logfile, verbose, dump_stats):
+def main(input_, output, logfile, verbose, threads, dump_stats):
     """
     Scan for CDS record for given DOMAIN objects.
     """
@@ -49,12 +64,29 @@ def main(input_, output, logfile, verbose, dump_stats):
     else:
         inf = open(input_, "rt", encoding="latin1")
 
-    for obj in rpsl.parse_rpsl_objects(inf):
-        if "ds-rdata" not in obj:
-            continue
-        o = do_cds_scan(obj)
-        if o is not None:
+    inq = queue.Queue()
+    outq = queue.SimpleQueue()
+
+    for _ in range(threads):
+        threading.Thread(
+            target=scanThread,
+            args=(inq, outq,),
+            daemon=True,
+        ).start()
+
+    for obj in filter(
+        lambda obj: "ds-rdata" in obj,
+        rpsl.parse_rpsl_objects(inf),
+    ):
+        inq.put(obj)
+
+    inq.join()
+    try:
+        while True:
+            o = outq.get_nowait()
             print(rpsl.write_rpsl_object(o), file=output)
+    except queue.Empty:
+        pass
     logger.info("Finished. Here are some stats:\n%s", report_counts())
     if dump_stats:
         json.dump(
