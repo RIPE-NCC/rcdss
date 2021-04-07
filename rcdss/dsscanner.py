@@ -48,7 +48,7 @@ def do_cds_scan(obj):
         if not check_signed_by_KSK(cds, ds_rdataset, dnskeyset):
             record(domain, Event.NOT_SIGNED_BY_KSK)
             logger.warning(
-                f"CDS of {domain} not properly"
+                f"CDS of {domain} not properly "
                 f"signed by current KSK",
             )
             return None
