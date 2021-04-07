@@ -3,7 +3,11 @@ import sys
 import gzip
 import json
 import threading
-import queue
+from queue import Queue, Empty
+try:
+    from queue import SimpleQueue
+except ImportError:  # Python 3.6 lacks SimpleQueue
+    SimpleQueue = Queue
 
 import click
 
@@ -64,8 +68,8 @@ def main(input_, output, logfile, verbose, threads, dump_stats):
     else:
         inf = open(input_, "rt", encoding="latin1")
 
-    inq = queue.Queue()
-    outq = queue.SimpleQueue()
+    inq = Queue()
+    outq = SimpleQueue()
 
     for _ in range(threads):
         threading.Thread(
@@ -85,7 +89,7 @@ def main(input_, output, logfile, verbose, threads, dump_stats):
         while True:
             o = outq.get_nowait()
             print(rpsl.write_rpsl_object(o), file=output)
-    except queue.Empty:
+    except Empty:
         pass
     logger.info("Finished. Here are some stats:\n%s", report_counts())
     if dump_stats:

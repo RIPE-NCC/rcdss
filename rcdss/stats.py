@@ -1,7 +1,10 @@
 
 from enum import Enum, auto
 from collections import defaultdict
-from queue import SimpleQueue
+try:
+    from queue import SimpleQueue
+except ImportError:  # Python 3.6 lacks SimpleQueue
+    from queue import Queue as SimpleQueue
 
 _RECORDS = defaultdict(list)
 _rq = SimpleQueue()
