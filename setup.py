@@ -1,10 +1,16 @@
 from setuptools import setup
 import rcdss
 
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
 setup(
     name=rcdss.__name__,
     version=rcdss.__version__,
     description=rcdss.__doc__,
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/ripe-ncc/rcdss",
     author="Ondřej Caletka",
     author_email="ondrej.caletka@ripe.net",
     packages=["rcdss"],
