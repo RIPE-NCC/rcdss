@@ -20,8 +20,8 @@ with *dummyfied* objects, output cannot be directly pushed into the Database.
 Instead, it has to be used as a diff-file for a GET-modify-PUT operation on the
 database.
 
-DNSSEC algorihm support
------------------------
+DNSSEC algorithm support
+------------------------
 
 The utility requires all DNS responses from the resolver to carry the `AD` flag
 to prove they have been properly validated by it. It also does some extra
