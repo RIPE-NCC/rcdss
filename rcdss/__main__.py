@@ -10,12 +10,33 @@ except ImportError:  # Python 3.6 lacks SimpleQueue
     SimpleQueue = Queue
 
 import click
+import dns.resolver
+import dns.inet
 
 from .dsscanner import do_cds_scan
 from .log import setup_logger, logger
 from .stats import report_counts, report_domains
 from . import rpsl
 from . import __version__
+
+
+def setup_resolvers(nss):
+    default_resolver = dns.resolver.get_default_resolver()
+    nameservers = []
+    for ns in nss:
+        if dns.inet.is_address(ns):
+            nameservers.append(ns)
+        else:
+            for rdtype in ["AAAA", "A"]:
+                r = dns.resolver.resolve(ns, rdtype, raise_on_no_answer=False)
+                nameservers.extend(a.address for a in r)
+    default_resolver.nameservers = nameservers
+    logger.debug("Configured DNS resolvers: %s", ", ".join(nameservers))
+
+    # If more than one nameserver is specified, then we probably want
+    # to use them all, not just the first one.
+    if len(nss) > 1:
+        default_resolver.rotate = True
 
 
 def scanThread(inq, outq):
@@ -51,11 +72,15 @@ def scanThread(inq, outq):
     help="Number of scanning threads", metavar="INT",
 )
 @click.option(
+    "--ns", multiple=True, help="Use this nameserver"
+    " (may be used multiple times)", metavar="ADDR",
+)
+@click.option(
     "--dump-stats", type=click.File("w", atomic=True,),
     help="Dump domain stats to a JSON file",
 )
 @click.version_option(__version__)
-def main(input_, output, logfile, verbose, threads, dump_stats):
+def main(input_, output, logfile, verbose, threads, ns, dump_stats):
     """
     Scan for CDS record for given DOMAIN objects.
     """
@@ -67,6 +92,9 @@ def main(input_, output, logfile, verbose, threads, dump_stats):
         inf = gzip.open(input_, "rt", encoding="latin1")
     else:
         inf = open(input_, "rt", encoding="latin1")
+
+    if ns:
+        setup_resolvers(ns)
 
     inq = Queue()
     outq = SimpleQueue()

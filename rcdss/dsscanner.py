@@ -1,4 +1,5 @@
 import datetime
+import random
 from collections import defaultdict
 
 import dns
@@ -74,7 +75,12 @@ def do_cds_scan(obj):
 
 def query_dns(domain, rdtype="CDS"):
     """Make a query to the local resolver. Return answer object."""
-    resolver = dns.resolver.Resolver()
+    default_resolver = dns.resolver.get_default_resolver()
+    # We use separate resolver instance per query
+    resolver = dns.resolver.Resolver(configure=False)
+    resolver.nameservers = default_resolver.nameservers
+    if default_resolver.rotate:
+        random.shuffle(resolver.nameservers)
     resolver.flags = dns.flags.RD
     resolver.use_edns(0, dns.flags.DO, 1200)
     try:
