@@ -73,16 +73,12 @@ def do_cds_scan(obj):
 
 
 def query_dns(domain, rdtype="CDS"):
-    """Make CDS query to the local resolver. Return answer object."""
+    """Make a query to the local resolver. Return answer object."""
     resolver = dns.resolver.Resolver()
-    resolver.set_flags(dns.flags.RD | dns.flags.AD)
+    resolver.flags = dns.flags.RD
     resolver.use_edns(0, dns.flags.DO, 1200)
     try:
-        a = resolver.resolve(domain, rdtype, raise_on_no_answer=False)
-        if (a.response.flags & dns.flags.AD) is False:
-            logger.warning(f"Unauthenticated response for {domain}")
-            return None
-        return a
+        return resolver.resolve(domain, rdtype, raise_on_no_answer=False)
     except dns.resolver.NoNameservers:
         # Is this a DNSSEC failure?
         try:

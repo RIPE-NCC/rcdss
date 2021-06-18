@@ -14,24 +14,22 @@ It reads a [dump of DOMAIN objects](https://ftp.ripe.net/ripe/dbase/split/ripe.d
 containing `ds-rdata:` attributes are processed.
 
 CDS records are scanned using default resolver of the host, which MUST be
-DNSSEC-aware and DNSSEC validating. The utility outputs RPSL-like file listing
-objects that should be modified in the RIPE database. Since the scanner works
-with *dummyfied* objects, output cannot be directly pushed into the Database.
-Instead, it has to be used as a diff-file for a GET-modify-PUT operation on the
-database.
+DNSSEC-aware and SHOULD perform DNSSEC-validation. The utility outputs RPSL-like
+file listing objects that should be modified in the RIPE database. Since the
+scanner works with *dummyfied* objects, output cannot be directly pushed into
+the Database.  Instead, it has to be used as a diff-file for a GET-modify-PUT
+operation on the database.
 
 DNSSEC algorithm support
 ------------------------
 
-The utility requires all DNS responses from the resolver to carry the `AD` flag
-to prove they have been properly validated by it. It also does some extra
-validations mandated by RFC 7344. These are done using
-[dnspython](https://www.dnspython.org/). The list of supported algorithms is
-therefore limited by their support in the resolver and the library.
+The utility does all the special validations mandated by RFC 7344. These are
+done using [dnspython](https://www.dnspython.org/). Since these validations
+provide similar level of security to standard DNSSEC validation process,
+validation in the DNS resolver is not required.
 
-In theory, the requirement for the `AD` flag could be relaxed since the extra
-validations provide similar level of trust. This would allow proper operation
-even with algorithms unsupported by the resolver.
+Therefore, the list of supported algorithms is same as the list of supported
+DNSSEC algorithms of `dnspython`.
 
 Installation and usage
 ----------------------
