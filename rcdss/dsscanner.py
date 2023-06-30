@@ -156,6 +156,8 @@ def filter_dnskey_set(dnskeyset, dsset):
     """
     Return a set of DNSKEYs with only keys
     matching fingerprints in the dsset.
+    We allow any supported DS record type,
+    even those deprecated by RFC 8624
     """
     s = set()
     for dnskey in dnskeyset:
@@ -168,9 +170,12 @@ def filter_dnskey_set(dnskeyset, dsset):
                     dnskeyset.name,
                     dnskey,
                     ds.digest_type,
+                    policy=dns.dnssec.allow_all_policy,
                 ):
                     s.add(dnskey)
             except dns.dnssec.UnsupportedAlgorithm:
+                pass
+            except dns.dnssec.DeniedByPolicy:
                 pass
     return s
 
@@ -179,6 +184,8 @@ def check_signed_by_KSK(cds, ds_rdataset, dnskeyset):
     """
     Check if the CDS is actually signed by a key contained in the
     current DS RRSET as per RFC 7344 section 4.1
+
+    We use RFC 8624 policy to ignore deprecated algorithms.
     """
     dsset = {
         dns.rdata.from_text(
@@ -192,9 +199,12 @@ def check_signed_by_KSK(cds, ds_rdataset, dnskeyset):
             cds.rrset,
             get_rrsigset(cds.response),
             {cds.name: keyset},
+            policy=dns.dnssec.rfc_8624_policy,
         )
         return True
     except dns.dnssec.ValidationFailure:
+        return False
+    except dns.dnssec.DeniedByPolicy:
         return False
 
 
@@ -205,6 +215,8 @@ def check_CDS_continuity(cds, dnskeyset):
 
     In a nutshell this means that at least one of the CDS rdata must be
     used to sign zone's DNSKEY record for each signature algorithm present.
+
+    We use RFC 8624 policy to ignore deprecated algorithms.
     """
     dssets = defaultdict(set)
     for ds in (
@@ -226,7 +238,10 @@ def check_CDS_continuity(cds, dnskeyset):
                 dnskeyset.rrset,
                 get_rrsigset(dnskeyset.response),
                 {cds.name: keyset},
+                policy=dns.dnssec.rfc_8624_policy,
             )
         return True
     except dns.dnssec.ValidationFailure:
+        return False
+    except dns.dnssec.DeniedByPolicy:
         return False
